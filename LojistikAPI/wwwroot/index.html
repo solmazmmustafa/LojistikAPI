@@ -1,0 +1,135 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Lojistik Yönetim Sistemi - Dinamik Panel</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            padding: 20px;
+        }
+
+        .grid-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            max-width: 900px;
+            margin: auto;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            cursor: pointer;
+            border-radius: 6px;
+            transition: 0.3s;
+        }
+
+            button:hover {
+                background-color: #0056b3;
+            }
+
+        .btn-map {
+            background-color: #6f42c1;
+            font-size: 12px;
+            margin-top: 5px;
+        }
+
+        .ilan-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #eee;
+            padding: 12px 0;
+        }
+
+        #harita {
+            height: 400px;
+            border-radius: 12px;
+            border: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="grid-container">
+        <div class="card">
+            <h2>Canlı Sevkiyat Takibi 🌍</h2>
+            <div id="harita"></div>
+        </div>
+
+        <div class="card">
+            <h2>Aktif İlanlar (Veritabanı) 🚚</h2>
+            <button onclick="ilanlariGetir()">Verileri API'den Çek</button>
+            <div id="ilanListesi"></div>
+        </div>
+    </div>
+
+    <script>
+        // Haritayı başlat
+        var map = L.map('harita').setView([39.0, 35.0], 6);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
+        var routeLayer = L.layerGroup().addTo(map);
+
+        // Basit bir Şehir -> Koordinat sözlüğü (Gerçek projede Google Geocoding API kullanılır)
+        const sehirKoordinatlari = {
+            "İstanbul": [41.0082, 28.9784],
+            "Ankara": [39.9208, 32.8541],
+            "İzmir": [38.4192, 27.1287],
+            "Bursa": [40.1885, 29.0610],
+            "Adana": [36.9914, 35.3308]
+        };
+
+        async function ilanlariGetir() {
+            const listeDiv = document.getElementById("ilanListesi");
+            listeDiv.innerHTML = "Veritabanına bağlanılıyor...";
+
+            const response = await fetch('/api/shipments');
+            const ilanlar = await response.json();
+
+            listeDiv.innerHTML = "";
+            ilanlar.forEach(ilan => {
+                listeDiv.innerHTML += `
+                    <div class="ilan-item">
+                        <div>
+                            <strong>${ilan.originAddress} ➔ ${ilan.destinationAddress}</strong><br>
+                            <small>${ilan.weight} Ton - ${ilan.status}</small>
+                        </div>
+                        <button class="btn-map" onclick="rotayiCiz('${ilan.originAddress}', '${ilan.destinationAddress}')">Haritada Gör</button>
+                    </div>
+                `;
+            });
+        }
+
+        function rotayiCiz(baslangic, varis) {
+            routeLayer.clearLayers(); // Önceki rotayı temizle
+
+            const startPos = sehirKoordinatlari[baslangic];
+            const endPos = sehirKoordinatlari[varis];
+
+            if (startPos && endPos) {
+                L.marker(startPos).addTo(routeLayer).bindPopup("Çıkış: " + baslangic);
+                L.marker(endPos).addTo(routeLayer).bindPopup("Varış: " + varis);
+
+                var line = L.polyline([startPos, endPos], { color: 'blue', weight: 5, opacity: 0.6 }).addTo(routeLayer);
+                map.fitBounds(line.getBounds(), { padding: [50, 50] });
+            } else {
+                alert("Bu şehirlerin koordinatları henüz sisteme tanımlanmamış.");
+            }
+        }
+    </script>
+
+</body>
+</html>
