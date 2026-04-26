@@ -1,4 +1,7 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using LojistikAPI.Data;
+using LojistikAPI.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace LojistikAPI.Controllers
 {
@@ -6,31 +9,71 @@ namespace LojistikAPI.Controllers
     [ApiController]
     public class PricingController : ControllerBase
     {
-        // GET: api/Pricing/calculate
-        [HttpGet("calculate")]
-        public IActionResult CalculatePrice(double mesafeKm, double kmBasiUcret, double ortalamaTuketim, double guncelMazotFiyati, double sabitGiderler)
+        private readonly AppDbContext _context;
+
+        // Veritabanı bağlantısını Fiyat Motoruna enjekte ediyoruz
+        public PricingController(AppDbContext context)
         {
-            // Not: Tüketim genelde "100 km'de yakılan litre" olarak hesaplanır (Örn: TIR için 100 km'de 35 litre).
-            // Bu yüzden mesafeyi 100'e bölüp tüketimle çarpıyoruz.
+            _context = context;
+        }
 
-            double yakitMaliyeti = (mesafeKm / 100) * ortalamaTuketim * guncelMazotFiyati;
-            double tabanUcret = mesafeKm * kmBasiUcret;
+        private readonly Dictionary<string, double> _distances = new(StringComparer.OrdinalIgnoreCase)
+        {
+            { "İstanbul-Ankara", 450 }, { "Ankara-İstanbul", 450 },
+            { "İstanbul-İzmir", 480 }, { "İzmir-İstanbul", 480 }
+        };
 
-            // Raporundaki formülün tam karşılığı:
-            double toplamFiyat = tabanUcret + yakitMaliyeti + sabitGiderler;
+        [HttpPost("calculate")]
+        public async Task<IActionResult> CalculatePrice([FromBody] CalculatePriceDto dto)
+        {
+            string route = $"{dto.OriginCity}-{dto.DestinationCity}";
 
-            // Sonucu sadece tek bir rakam olarak değil, faturaya dökülmüş şık bir JSON formatında geri döndürüyoruz
-            var hesapOzeti = new
+            if (!_distances.TryGetValue(route, out double distanceKm))
+                distanceKm = 500;
+
+            double fuelConsumptionPer100Km = dto.VehicleType.ToUpper() switch
             {
-                RotaMesafesi = mesafeKm + " km",
-                HizmetBedeli = Math.Round(tabanUcret, 2) + " TL",
-                HesaplananYakitMaliyeti = Math.Round(yakitMaliyeti, 2) + " TL",
-                EkGiderler = sabitGiderler + " TL",
-                GenelToplam = Math.Round(toplamFiyat, 2) + " TL",
-                KdvDahilToplam = Math.Round(toplamFiyat * 1.20, 2) + " TL" // Güncel %20 KDV ekledik
+                "KAMYONET" => 12,
+                "KAMYON" => 25,
+                _ => 35 // TIR
             };
 
-            return Ok(hesapOzeti);
+            double basePricePerKm = dto.VehicleType.ToUpper() switch
+            {
+                "KAMYONET" => 15,
+                "KAMYON" => 25,
+                _ => 40 // TIR
+            };
+
+            // ✅ İŞTE AKILLI KISIM: Veritabanındaki "En Son Eklenen" mazot fiyatını buluyoruz
+            var latestFuelRecord = await _context.FuelPrices
+                .OrderByDescending(f => f.RecordedAt)
+                .FirstOrDefaultAsync();
+
+            // Eğer henüz veri çekilmediyse güvenlik amaçlı varsayılan 42.50 kullanıyoruz
+            double currentDieselPrice = latestFuelRecord != null ? latestFuelRecord.PricePerLiter : 42.50;
+
+            double totalFuelNeeded = (distanceKm / 100) * fuelConsumptionPer100Km;
+            double fuelCost = totalFuelNeeded * currentDieselPrice;
+            double transportCost = distanceKm * basePricePerKm;
+
+            double subTotal = transportCost + fuelCost + dto.AdditionalCosts;
+            double totalWithTax = subTotal * 1.20;
+
+            var result = new
+            {
+                Rota = route,
+                Mesafe = distanceKm + " km",
+                AracTipi = dto.VehicleType.ToUpper(),
+                GuncelMazotFiyati = currentDieselPrice + " TL/Litre", // Müşteriye şeffaf fiyat sunumu
+                HesaplananYakit = Math.Round(fuelCost, 2) + " TL",
+                HizmetBedeli = Math.Round(transportCost, 2) + " TL",
+                EkGiderler = dto.AdditionalCosts + " TL",
+                AraToplam = Math.Round(subTotal, 2) + " TL",
+                KdvDahilToplam = Math.Round(totalWithTax, 2) + " TL"
+            };
+
+            return Ok(result);
         }
     }
 }

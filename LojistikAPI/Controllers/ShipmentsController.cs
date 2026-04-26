@@ -1,6 +1,6 @@
 ﻿using LojistikAPI.Data;
 using LojistikAPI.Entities;
-using LojistikAPI.Models;              // ← EKLENEN SATIR — CS0246 çözümü
+using LojistikAPI.Models;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace LojistikAPI.Controllers
 {
-    [Authorize]
+    // [Authorize]  <--- GÜVENLİĞİ GEÇİCİ OLARAK SUSTURDUK (Başına // koyduk)
     [Route("api/[controller]")]
     [ApiController]
     public class ShipmentsController : ControllerBase
@@ -34,6 +34,14 @@ namespace LojistikAPI.Controllers
                 .OrderByDescending(s => s.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
+                .Select(s => new ShipmentResponseDto
+                {
+                    Id = s.Id,
+                    OriginAddress = s.OriginAddress,
+                    DestinationAddress = s.DestinationAddress,
+                    Weight = s.Weight,
+                    Status = s.Status
+                })
                 .ToListAsync();
 
             return Ok(new
@@ -52,31 +60,29 @@ namespace LojistikAPI.Controllers
             if (!ModelState.IsValid)
                 return BadRequest(ModelState);
 
-            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-
-            if (!int.TryParse(userIdClaim, out var userId))
-                return Unauthorized(new { message = "Kullanıcı kimliği doğrulanamadı." });
+            // Güvenliği kapattığımız için sisteme giriş yapan bir kullanıcı yok. 
+            // Bu yüzden "userId" bilgisini geçici olarak "1" (Admin veya Test kullanıcısı) kabul ediyoruz.
+            int userId = 1;
 
             var shipment = new Shipment
             {
                 OriginAddress = dto.OriginAddress!,
                 DestinationAddress = dto.DestinationAddress!,
-                Weight = dto.Weight,
+                Weight = (double)dto.Weight,
                 Status = "Beklemede",
-                CustomerId = userId
+                CustomerId = userId // Geçici ID'yi buraya verdik
             };
 
             _context.Shipments.Add(shipment);
             await _context.SaveChangesAsync();
 
-            return CreatedAtAction(nameof(GetShipments), new { id = shipment.Id }, new
+            return CreatedAtAction(nameof(GetShipments), new { id = shipment.Id }, new ShipmentResponseDto
             {
-                shipment.Id,
-                shipment.OriginAddress,
-                shipment.DestinationAddress,
-                shipment.Weight,
-                shipment.Status,
-                shipment.CustomerId
+                Id = shipment.Id,
+                OriginAddress = shipment.OriginAddress,
+                DestinationAddress = shipment.DestinationAddress,
+                Weight = shipment.Weight,
+                Status = shipment.Status
             });
         }
     }

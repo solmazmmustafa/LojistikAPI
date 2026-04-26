@@ -1,13 +1,12 @@
 ﻿namespace LojistikAPI.Entities
 {
-    // Sistemdeki tüm kullanıcıları (Müşteri, Firma, Admin) tutacağımız tablo
     public class User
     {
         public int Id { get; set; }
-        public string FullName { get; set; }
-        public string Email { get; set; }
-        public string Password { get; set; }
-        public string Role { get; set; } // "Müşteri" veya "Firma"
-        public string PhoneNumber { get; set; }
+        public string FullName { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string Password { get; set; } = string.Empty;
+        public string Role { get; set; } = string.Empty;
+        public string PhoneNumber { get; set; } = string.Empty;
     }
 }

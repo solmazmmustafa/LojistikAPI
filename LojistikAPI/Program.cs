@@ -1,52 +1,50 @@
-// ✅ Tüm gerekli using'ler eksiksiz tanımlandı
 using LojistikAPI.Data;
+using LojistikAPI.Hubs;
+using LojistikAPI.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi;
-using Microsoft.OpenApi.Models;   // CS0234 çözümü
+using Microsoft.OpenApi.Models; // Swagger için gereken asıl kütüphane
 using System.Text;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
 // ─────────────────────────────────────────────
-// 1. VERİTABANI BAĞLANTISI
+// 1. VERİTABANI VE TEMEL AYARLAR
 // ─────────────────────────────────────────────
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// ─────────────────────────────────────────────
-// 2. CONTROLLER & API EXPLORER
-// ─────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSignalR(); // Canlı harita (Telsiz) altyapısı
+// Arka plan işçisini (Görünmez İşçi) sisteme kaydediyoruz
+
+builder.Services.AddHostedService<FuelPriceUpdateService>();
+// E-Posta servisini sistemin her yerinde (Controller'larda) kullanılabilir hale getiriyoruz
+builder.Services.AddSingleton<EmailService>();
 
 // ─────────────────────────────────────────────
-// 3. SWAGGER — JWT DESTEKLİ
-// CS0234, CS0117, CS0246 → Microsoft.OpenApi.Models using'i ile çözüldü
+// 2. İŞTE İSTEDİĞİN SWAGGER KODLARI 
 // ─────────────────────────────────────────────
 builder.Services.AddSwaggerGen(c =>
 {
-    c.SwaggerDoc("v1", new OpenApiInfo
-    {
-        Title = "Lojistik API",
-        Version = "v1"
-    });
+    // Swagger sayfasının ana başlığı
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "Lojistik API", Version = "v1" });
 
-    // JWT Bearer tanımı
+    // Swagger'ın sağ üst köşesine "Authorize" (Kilit) butonunu ekleyen kod
     c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
         Name = "Authorization",
-        Type = SecuritySchemeType.Http,   // ✅ ApiKey yerine Http — daha doğru
-        Scheme = "bearer",                  // ✅ küçük harf — RFC standardı
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
         BearerFormat = "JWT",
         In = ParameterLocation.Header,
-        Description = "JWT token girin. Örnek: eyJhbGci..."
+        Description = "Giriş yaptıktan sonra aldığınız Token'ı buraya yapıştırın."
     });
 
-    // ✅ CS0117 & CS0246 çözümü: OpenApiReference doğru yapılandırıldı
-    // ✅ new List<string>() yerine Array.Empty<string>() — daha temiz
+    // Kilit butonuna token girdiğimizde, bunu diğer tüm sayfalara (ilanlar, dosyalar vs.) otomatik taşıyan kod
     c.AddSecurityRequirement(new OpenApiSecurityRequirement
     {
         {
@@ -55,74 +53,70 @@ builder.Services.AddSwaggerGen(c =>
                 Reference = new OpenApiReference
                 {
                     Type = ReferenceType.SecurityScheme,
-                    Id   = "Bearer"
+                    Id = "Bearer"
                 }
             },
-            Array.Empty<string>()   // CS0117 çözümü — List<string> import'a gerek kalmadı
+            Array.Empty<string>()
         }
     });
 });
 
 // ─────────────────────────────────────────────
-// 4. JWT KİMLİK DOĞRULAMA
-// CS8604 → null-coalescing operatörü ile çözüldü
+// 3. GÜVENLİK (JWT) VE İZİNLER (CORS)
 // ─────────────────────────────────────────────
-
-// ✅ Key appsettings.json'dan okunur; yoksa exception fırlat (sessiz default tehlikelidir)
 var jwtKey = builder.Configuration["Jwt:Key"]
-    ?? throw new InvalidOperationException(
-        "Jwt:Key appsettings.json içinde tanımlanmamış!");
+    ?? throw new InvalidOperationException("Jwt:Key tanımlanmamış!");
 
-builder.Services
-    .AddAuthentication(options =>
+builder.Services.AddAuthentication(options =>
+{
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(options =>
+{
+    options.TokenValidationParameters = new TokenValidationParameters
     {
-        options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-        options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-    })
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            // ✅ CS8604 çözümü: null ise exception ile erken yakalanıyor
-            IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtKey))
-        };
-    });
+        ValidateIssuer = true,
+        ValidateAudience = true,
+        ValidateLifetime = true,
+        ValidateIssuerSigningKey = true,
+        ValidIssuer = builder.Configuration["Jwt:Issuer"],
+        ValidAudience = builder.Configuration["Jwt:Audience"],
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+    };
+});
 
-// ─────────────────────────────────────────────
-// 5. CORS POLİTİKASI
-// ⚠️  AllowAnyOrigin production'da güvenlik riski — geliştirme için OK
-// ─────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowAll", policy =>
-        policy.AllowAnyOrigin()
+        policy.WithOrigins("http://localhost:5199", "https://seninsiten.com")
               .AllowAnyMethod()
-              .AllowAnyHeader());
+              .AllowAnyHeader()
+              .AllowCredentials());
 });
 
 // ─────────────────────────────────────────────
-// UYGULAMA PIPELINE
+// 4. UYGULAMAYI AYAĞA KALDIRMA (PIPELINE)
 // ─────────────────────────────────────────────
 var app = builder.Build();
 
 if (app.Environment.IsDevelopment())
 {
+    // Swagger'ı tarayıcıda çalıştıran tetikleyiciler
     app.UseSwagger();
-    app.UseSwaggerUI(c =>
-        c.SwaggerEndpoint("/swagger/v1/swagger.json", "Lojistik API v1"));
+    app.UseSwaggerUI(c => c.SwaggerEndpoint("/swagger/v1/swagger.json", "Lojistik API v1"));
 }
 
-app.UseStaticFiles();
+app.UseStaticFiles(); // Yüklediğimiz resimlerin tarayıcıda görünmesini sağlar
 app.UseHttpsRedirection();
-app.UseCors("AllowAll");        // ✅ Authentication'dan ÖNCE gelmeli
-app.UseAuthentication();        // ✅ Sıralama kritik: önce Authentication
-app.UseAuthorization();         // ✅ sonra Authorization
+app.UseCors("AllowAll");
+app.UseAuthentication();
+app.UseAuthorization();
 app.MapControllers();
+
+// Telsiz merkezimizin yayın adresini belirliyoruz
+app.MapHub<TrackingHub>("/trackingHub");
+// Canlı bildirim merkezinin yayın adresini belirliyoruz
+app.MapHub<NotificationHub>("/notificationHub");
+
 app.Run();

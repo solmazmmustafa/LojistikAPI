@@ -1,4 +1,5 @@
 ﻿using LojistikAPI.Data;
+using LojistikAPI.Models; // EKSİK OLAN SATIR BUYDU (LoginModel'i bulmasını sağlar)
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
