@@ -1,89 +1,49 @@
-﻿using LojistikAPI.Data;
-using LojistikAPI.Entities;
+﻿using LojistikAPI.Features.Shipments.Commands;
+using LojistikAPI.Features.Shipments.Queries;
 using LojistikAPI.Models;
+using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Security.Claims;
+using System.Threading.Tasks;
 
 namespace LojistikAPI.Controllers
 {
-    // [Authorize]  <--- GÜVENLİĞİ GEÇİCİ OLARAK SUSTURDUK (Başına // koyduk)
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ShipmentsController : ControllerBase
     {
-        private readonly AppDbContext _context;
+        // Sadece Postacıyı (MediatR) içeri alıyoruz. DbContext'e elveda!
+        private readonly IMediator _mediator;
 
-        public ShipmentsController(AppDbContext context)
+        public ShipmentsController(IMediator mediator)
         {
-            _context = context;
+            _mediator = mediator;
         }
 
         [HttpGet]
-        public async Task<IActionResult> GetShipments(
-            [FromQuery] int page = 1,
-            [FromQuery] int pageSize = 10)
+        public async Task<IActionResult> GetShipments([FromQuery] int page = 1, [FromQuery] int pageSize = 10)
         {
-            pageSize = Math.Clamp(pageSize, 1, 50);
-
-            var totalCount = await _context.Shipments.CountAsync();
-
-            var shipments = await _context.Shipments
-                .AsNoTracking()
-                .OrderByDescending(s => s.Id)
-                .Skip((page - 1) * pageSize)
-                .Take(pageSize)
-                .Select(s => new ShipmentResponseDto
-                {
-                    Id = s.Id,
-                    OriginAddress = s.OriginAddress,
-                    DestinationAddress = s.DestinationAddress,
-                    Weight = s.Weight,
-                    Status = s.Status
-                })
-                .ToListAsync();
-
-            return Ok(new
-            {
-                data = shipments,
-                totalCount,
-                page,
-                pageSize,
-                totalPages = (int)Math.Ceiling(totalCount / (double)pageSize)
-            });
+            // İsteği zarfa koy ve postacıya ver
+            var query = new GetShipmentsQuery { Page = page, PageSize = pageSize };
+            var result = await _mediator.Send(query);
+            return Ok(result);
         }
 
         [HttpPost]
         public async Task<IActionResult> CreateShipment([FromBody] CreateShipmentDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+            // Kullanıcı ID'sini Token'dan al
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!int.TryParse(userIdClaim, out var userId))
+                return Unauthorized(new { message = "Lütfen giriş yapınız veya geçerli bir token kullanınız." });
 
-            // Güvenliği kapattığımız için sisteme giriş yapan bir kullanıcı yok. 
-            // Bu yüzden "userId" bilgisini geçici olarak "1" (Admin veya Test kullanıcısı) kabul ediyoruz.
-            int userId = 1;
+            // İsteği zarfa koy ve postacıya ver
+            var command = new CreateShipmentCommand(dto, userId);
+            var result = await _mediator.Send(command);
 
-            var shipment = new Shipment
-            {
-                OriginAddress = dto.OriginAddress!,
-                DestinationAddress = dto.DestinationAddress!,
-                Weight = (double)dto.Weight,
-                Status = "Beklemede",
-                CustomerId = userId // Geçici ID'yi buraya verdik
-            };
-
-            _context.Shipments.Add(shipment);
-            await _context.SaveChangesAsync();
-
-            return CreatedAtAction(nameof(GetShipments), new { id = shipment.Id }, new ShipmentResponseDto
-            {
-                Id = shipment.Id,
-                OriginAddress = shipment.OriginAddress,
-                DestinationAddress = shipment.DestinationAddress,
-                Weight = shipment.Weight,
-                Status = shipment.Status
-            });
+            return CreatedAtAction(nameof(GetShipments), new { id = result.Id }, result);
         }
     }
 }

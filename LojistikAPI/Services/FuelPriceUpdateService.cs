@@ -1,6 +1,11 @@
 ﻿using LojistikAPI.Data;
 using LojistikAPI.Entities;
 using Microsoft.EntityFrameworkCore;
+using System;
+using System.Threading;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LojistikAPI.Services
 {
@@ -16,6 +21,10 @@ namespace LojistikAPI.Services
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
+            // ✅ EKLENEN KOD: Uygulama ilk açıldığında SQL Server'ın uyanması ve bağlantı kurması için 5 saniye bekle. 
+            // Bu sayede "Timeout (Zaman Aşımı)" hatasından kurtulmuş oluyoruz!
+            await Task.Delay(5000, stoppingToken);
+
             // Web sitesi kapanana kadar bu döngü dönecek
             while (!stoppingToken.IsCancellationRequested)
             {

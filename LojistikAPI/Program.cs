@@ -6,9 +6,14 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models; // Swagger için gereken asıl kütüphane
 using System.Text;
+using LojistikAPI.Middlewares;
 
 
 var builder = WebApplication.CreateBuilder(args);
+
+
+// MediatR'ı sisteme kaydediyoruz
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
 // ─────────────────────────────────────────────
 // 1. VERİTABANI VE TEMEL AYARLAR
@@ -24,6 +29,7 @@ builder.Services.AddSignalR(); // Canlı harita (Telsiz) altyapısı
 builder.Services.AddHostedService<FuelPriceUpdateService>();
 // E-Posta servisini sistemin her yerinde (Controller'larda) kullanılabilir hale getiriyoruz
 builder.Services.AddSingleton<EmailService>();
+builder.Services.AddScoped<IOfferService, OfferService>();
 
 // ─────────────────────────────────────────────
 // 2. İŞTE İSTEDİĞİN SWAGGER KODLARI 
@@ -99,6 +105,8 @@ builder.Services.AddCors(options =>
 // 4. UYGULAMAYI AYAĞA KALDIRMA (PIPELINE)
 // ─────────────────────────────────────────────
 var app = builder.Build();
+// Tüm hataları merkezden yakalayan kalkanımız
+app.UseMiddleware<ExceptionMiddleware>();
 
 if (app.Environment.IsDevelopment())
 {

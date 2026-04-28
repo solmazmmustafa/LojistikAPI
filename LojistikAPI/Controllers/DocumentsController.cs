@@ -8,7 +8,7 @@ using Microsoft.AspNetCore.Hosting;
 
 namespace LojistikAPI.Controllers
 {
-    //[Authorize]
+    [Authorize]
 
     [Route("api/[controller]")]
     [ApiController]

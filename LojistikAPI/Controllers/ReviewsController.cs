@@ -8,7 +8,7 @@ using System.Security.Claims;
 
 namespace LojistikAPI.Controllers
 {
-   // [Authorize]
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class ReviewsController : ControllerBase

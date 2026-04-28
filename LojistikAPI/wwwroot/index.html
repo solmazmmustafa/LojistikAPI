@@ -3,148 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Lojistik Yönetim Sistemi - Profesyonel Panel</title>
+    <title>Lojistik Yönetim Sistemi | Secure Panel</title>
 
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
     <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/7.0.5/signalr.min.js"></script>
 
     <style>
+        /* --- RENK PALETİ & TEMA (Sert Lacivert & Yumuşak Turuncu) --- */
         :root {
-            --primary: #2563eb;
-            --secondary: #475569;
-            --success: #16a34a;
-            --background: #f8fafc;
-            --card-bg: #ffffff;
-            --border: #e2e8f0;
+            --navy-dark: #0A192F; /* Sert ve Derin Lacivert */
+            --navy-light: #172A45; /* Kart Arka Planları */
+            --orange-main: #FF6B00; /* Enerjik Turuncu */
+            --orange-hover: #FF8533; /* Yumuşak Turuncu Hover */
+            --text-light: #E6F1FF; /* Yumuşak Beyaz/Gri */
+            --text-muted: #8892B0; /* Pasif Metinler */
+            --bg-body: #020C1B; /* Çok Koyu Arka Plan */
+            --danger: #ef4444;
+            --success: #10b981;
         }
 
         body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background-color: var(--background);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-light);
             margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        /* --- LOGİN EKRANI (Keskin Hatlar, Yumuşak Gölgeler) --- */
+        #login-section {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .login-box {
+            background: var(--navy-light);
+            padding: 40px;
+            border-radius: 8px; /* Yumuşak köşeler */
+            border-top: 4px solid var(--orange-main); /* Sert Vurgu */
+            box-shadow: 0 20px 30px -10px rgba(0,0,0,0.7);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+            .login-box h1 {
+                color: var(--text-light);
+                margin-top: 0;
+                font-size: 24px;
+            }
+
+            .login-box p {
+                color: var(--text-muted);
+                font-size: 14px;
+                margin-bottom: 25px;
+            }
+
+        /* --- ANA DASHBOARD --- */
+        #dashboard-section {
+            display: none; /* Login olana kadar gizli */
+            width: 100%;
+            max-width: 1400px;
             padding: 20px;
-            color: #0f172a;
         }
 
         .header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            padding: 15px 20px;
+            background: var(--navy-light);
+            border-radius: 8px;
             margin-bottom: 24px;
-            padding-bottom: 16px;
-            border-bottom: 2px solid var(--border);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.3);
+            border-left: 4px solid var(--orange-main);
         }
 
-        /* Ana Grid Tasarımı */
+            .header h1 {
+                margin: 0;
+                font-size: 20px;
+                color: var(--text-light);
+            }
+
+        .user-info {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logout-btn {
+            background: transparent;
+            border: 1px solid var(--danger);
+            color: var(--danger);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+            .logout-btn:hover {
+                background: var(--danger);
+                color: white;
+            }
+
+        /* Ana Grid */
         .dashboard-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
             gap: 24px;
-            max-width: 1400px;
-            margin: 0 auto;
         }
 
+        /* Kart Tasarımları */
         .card {
-            background: var(--card-bg);
+            background: var(--navy-light);
             padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
             margin-bottom: 24px;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
             .card h2 {
                 margin-top: 0;
-                font-size: 1.25rem;
-                color: var(--secondary);
-                border-bottom: 1px solid var(--border);
+                font-size: 1.1rem;
+                color: var(--text-light);
+                border-bottom: 1px solid rgba(255,255,255,0.1);
                 padding-bottom: 12px;
                 margin-bottom: 20px;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
 
         /* Harita */
         #harita {
-            height: 450px;
-            border-radius: 12px;
-            border: 1px solid var(--border);
+            height: 400px;
+            border-radius: 8px;
+            border: 2px solid var(--navy-dark);
             z-index: 1;
         }
 
-        /* Form Elemanları */
+        /* Form Elemanları (Sert ve modern) */
         .form-group {
             margin-bottom: 16px;
+            text-align: left;
         }
 
             .form-group label {
                 display: block;
                 margin-bottom: 6px;
                 font-weight: 600;
-                font-size: 0.9rem;
+                font-size: 0.85rem;
+                color: var(--text-muted);
             }
 
         input, select {
             width: 100%;
-            padding: 10px;
-            border: 1px solid var(--border);
-            border-radius: 8px;
+            padding: 12px;
+            background: var(--navy-dark);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: var(--text-light);
+            border-radius: 6px;
             box-sizing: border-box;
-            transition: 0.2s;
+            transition: all 0.3s ease;
         }
 
             input:focus, select:focus {
                 outline: none;
-                border-color: var(--primary);
-                box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+                border-color: var(--orange-main);
+                box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.2); /* Yumuşak parlama */
             }
 
-        button {
-            background-color: var(--primary);
+        /* Turuncu Buton (Sert renk, yumuşak etkileşim) */
+        button.primary-btn {
+            background-color: var(--orange-main);
             color: white;
             border: none;
             padding: 12px 20px;
-            font-weight: 600;
-            border-radius: 8px;
+            font-weight: bold;
+            font-size: 1rem;
+            border-radius: 6px;
             cursor: pointer;
-            transition: all 0.2s;
+            transition: all 0.2s ease-in-out;
             width: 100%;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
-            button:hover {
-                background-color: #1d4ed8;
-                transform: translateY(-1px);
-            }
-
-        .btn-success {
-            background-color: var(--success);
-        }
-
-            .btn-success:hover {
-                background-color: #15803d;
+            button.primary-btn:hover {
+                background-color: var(--orange-hover);
+                transform: translateY(-2px);
+                box-shadow: 0 10px 15px -3px rgba(255, 107, 0, 0.4);
             }
 
         /* İlan Listesi */
         .ilan-item {
-            background: var(--background);
-            border: 1px solid var(--border);
+            background: var(--navy-dark);
+            border: 1px solid rgba(255,255,255,0.05);
             padding: 16px;
-            border-radius: 8px;
+            border-radius: 6px;
             margin-bottom: 12px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: 0.2s;
         }
+
+            .ilan-item:hover {
+                border-color: var(--orange-main);
+            }
 
         .ilan-badge {
-            background: #e0f2fe;
-            color: #0369a1;
+            background: rgba(255, 107, 0, 0.1);
+            color: var(--orange-main);
             padding: 4px 8px;
-            border-radius: 12px;
+            border-radius: 4px;
             font-size: 0.8rem;
             font-weight: bold;
+            border: 1px solid rgba(255, 107, 0, 0.3);
         }
 
-        /* Canlı Bildirim Kutusu (Toast) */
+        /* Bildirim Toast */
         #notification-container {
             position: fixed;
             top: 20px;
@@ -153,16 +240,14 @@
         }
 
         .toast {
-            background: white;
-            border-left: 4px solid var(--primary);
+            background: var(--navy-light);
+            border-left: 4px solid var(--orange-main);
+            color: var(--text-light);
             padding: 16px 24px;
             margin-bottom: 10px;
-            border-radius: 8px;
-            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
-            animation: slideIn 0.5s ease-out;
-            display: flex;
-            align-items: center;
-            gap: 12px;
+            border-radius: 4px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+            animation: slideIn 0.4s ease-out;
         }
 
         @keyframes slideIn {
@@ -177,14 +262,15 @@
             }
         }
 
-        /* Fatura Sonuç Ekranı */
+        /* Fiyat Sonuç Ekranı */
         #fiyatSonuc {
             margin-top: 20px;
             padding: 15px;
-            background-color: #f0fdf4;
-            border: 1px solid #bbf7d0;
-            border-radius: 8px;
+            background: rgba(16, 185, 129, 0.1);
+            border: 1px solid var(--success);
+            border-radius: 6px;
             display: none;
+            color: var(--text-light);
         }
     </style>
 </head>
@@ -192,197 +278,287 @@
 
     <div id="notification-container"></div>
 
-    <div class="header">
-        <div>
-            <h1 style="margin: 0; color: #1e293b;">Lojistik Platformu</h1>
-            <p style="margin: 5px 0 0 0; color: #64748b;">Merkezi Yönetim ve Operasyon Paneli</p>
-        </div>
-        <div id="connectionStatus" style="padding: 8px 16px; background: #fee2e2; color: #991b1b; border-radius: 20px; font-weight: bold; font-size: 14px;">
-            🔴 Telsiz Bağlantısı Bekleniyor...
+    <div id="login-section">
+        <div class="login-box">
+            <h1>Lojistik Ağına Katıl</h1>
+            <p>Devam etmek için yetkili girişi yapınız.</p>
+            <div class="form-group">
+                <label>E-Posta Adresi</label>
+                <input type="email" id="loginEmail" placeholder="test@lojistik.com" value="admin@lojistik.com">
+            </div>
+            <div class="form-group">
+                <label>Şifre</label>
+                <input type="password" id="loginPassword" placeholder="******" value="123">
+            </div>
+            <button class="primary-btn" onclick="girisYap()">Sisteme Gir</button>
+            <p id="loginError" style="color: var(--danger); margin-top: 15px; display: none;"></p>
         </div>
     </div>
 
-    <div class="dashboard-grid">
-
-        <div class="left-column">
-            <div class="card">
-                <h2>🌍 Canlı Sevkiyat ve Rota Takibi</h2>
-                <div id="harita"></div>
+    <div id="dashboard-section">
+        <div class="header">
+            <div>
+                <h1>⚡ Lojistik Operasyon Merkezi</h1>
             </div>
-
-            <div class="card">
-                <h2>🚚 Açık Yük İlanları</h2>
-                <button onclick="ilanlariGetir()" style="margin-bottom: 15px;">🔄 Veritabanından İlanları Çek</button>
-                <div id="ilanListesi">
-                    <p style="color: #64748b; text-align: center;">Henüz ilan çekilmedi.</p>
-                </div>
+            <div class="user-info">
+                <span id="userEmailDisplay" style="color: var(--text-muted); font-size: 14px;"></span>
+                <span id="connectionStatus" style="font-size: 12px; padding: 4px 8px; border-radius: 4px; background: rgba(239, 68, 68, 0.1); color: var(--danger);">🔴 Telsiz Kapalı</span>
+                <button class="logout-btn" onclick="cikisYap()">Çıkış Yap</button>
             </div>
         </div>
 
-        <div class="right-column">
+        <div class="dashboard-grid">
+            <div class="left-column">
+                <div class="card">
+                    <h2>🌍 Canlı Takip Radarı</h2>
+                    <div id="harita"></div>
+                </div>
 
-            <div class="card">
-                <h2>🤖 Akıllı Fiyat Motoru (EPDK Destekli)</h2>
-                <div class="form-group">
-                    <label>Çıkış Şehri</label>
-                    <input type="text" id="calcOrigin" placeholder="Örn: İstanbul">
+                <div class="card">
+                    <h2>🚚 Aktif Yük İlanları (Pazaryeri)</h2>
+                    <button class="primary-btn" onclick="ilanlariGetir()" style="margin-bottom: 15px; background-color: var(--navy-dark); border: 1px solid rgba(255,255,255,0.1);">🔄 İlanları Senkronize Et</button>
+                    <div id="ilanListesi">
+                        <p style="color: var(--text-muted); text-align: center;">Güvenli bağlantı kuruldu. İlanları çekebilirsiniz.</p>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label>Varış Şehri</label>
-                    <input type="text" id="calcDest" placeholder="Örn: Ankara">
-                </div>
-                <div class="form-group">
-                    <label>Araç Tipi</label>
-                    <select id="calcVehicle">
-                        <option value="TIR">TIR (35 Lt/100km)</option>
-                        <option value="KAMYON">Kamyon (25 Lt/100km)</option>
-                        <option value="KAMYONET">Kamyonet (12 Lt/100km)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Ek Masraflar (Köprü, Otoyol vb.) TL</label>
-                    <input type="number" id="calcExtra" value="0">
-                </div>
-                <button class="btn-success" onclick="fiyatHesapla()">Fiyat Çıkar</button>
-
-                <div id="fiyatSonuc"></div>
             </div>
 
-            <div class="card">
-                <h2>📄 Resmi Evrak Yükleme</h2>
-                <form id="uploadForm" onsubmit="evrakYukle(event)">
+            <div class="right-column">
+                <div class="card">
+                    <h2>🤖 Akıllı Fiyat Motoru</h2>
                     <div class="form-group">
-                        <label>İlan Numarası (ID)</label>
-                        <input type="number" id="docShipmentId" required>
+                        <label>Çıkış Şehri</label>
+                        <input type="text" id="calcOrigin" placeholder="İstanbul">
                     </div>
                     <div class="form-group">
-                        <label>Evrak Tipi</label>
-                        <select id="docType">
-                            <option value="İrsaliye">İrsaliye</option>
-                            <option value="CMR">CMR Belgesi</option>
-                            <option value="Hasar_Durumu">Yük Fotoğrafı</option>
+                        <label>Varış Şehri</label>
+                        <input type="text" id="calcDest" placeholder="Ankara">
+                    </div>
+                    <div class="form-group">
+                        <label>Araç Tipi</label>
+                        <select id="calcVehicle">
+                            <option value="TIR">Ağır Vasıta / TIR</option>
+                            <option value="KAMYON">Kamyon</option>
+                            <option value="KAMYONET">Hafif Ticari / Kamyonet</option>
                         </select>
                     </div>
                     <div class="form-group">
-                        <label>Dosya Seçin</label>
-                        <input type="file" id="docFile" required accept="image/*,.pdf">
+                        <label>Ek Operasyon Masrafları (TL)</label>
+                        <input type="number" id="calcExtra" value="0">
                     </div>
-                    <button type="submit" style="background-color: #64748b;">Güvenli Yükle</button>
-                </form>
-            </div>
+                    <button class="primary-btn" onclick="fiyatHesapla()">Maliyet Analizi Yap</button>
+                    <div id="fiyatSonuc"></div>
+                </div>
 
+                <div class="card">
+                    <h2>📄 Resmi Evrak Yükleme</h2>
+                    <form id="uploadForm" onsubmit="evrakYukle(event)">
+                        <div class="form-group">
+                            <label>İlan Numarası (ID)</label>
+                            <input type="number" id="docShipmentId" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Belge Türü</label>
+                            <select id="docType">
+                                <option value="İrsaliye">İrsaliye</option>
+                                <option value="CMR">CMR Belgesi</option>
+                                <option value="Hasar_Durumu">Yük Fotoğrafı / Hasar</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dosya Seçin</label>
+                            <input type="file" id="docFile" required style="padding: 8px;">
+                        </div>
+                        <button type="submit" class="primary-btn" style="background-color: var(--navy-dark); border: 1px solid var(--orange-main);">Güvenli Ağa Yükle</button>
+                    </form>
+                </div>
+            </div>
         </div>
     </div>
 
     <script>
-        // --- 1. HARİTA ALTYAPISI ---
-        var map = L.map('harita').setView([39.0, 35.0], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(map);
-        var routeLayer = L.layerGroup().addTo(map);
+        // API ve SignalR adreslerini Dynamic (Göreceli) yaptık!
+        const API_URL = "/api";
 
-        const sehirKoordinatlari = {
-            "İstanbul": [41.0082, 28.9784], "Ankara": [39.9208, 32.8541],
-            "İzmir": [38.4192, 27.1287], "Bursa": [40.1885, 29.0610],
-            "Adana": [36.9914, 35.3308], "Van": [38.5012, 43.3730], "Mersin": [36.8121, 34.6415]
+        let map;
+        let routeLayer;
+        let signalRConnection;
+
+        // --- 1. UYGULAMA BAŞLANGIÇ KONTROLÜ ---
+        window.onload = function () {
+            const token = localStorage.getItem("jwt_token");
+            if (token) {
+                ekraniGoster("dashboard");
+                document.getElementById("userEmailDisplay").innerText = "Kullanıcı: " + localStorage.getItem("user_email");
+                haritayiBaslat();
+                telsiziBaslat(token);
+            } else {
+                ekraniGoster("login");
+            }
         };
 
-        function rotayiCiz(baslangic, varis) {
-            routeLayer.clearLayers();
-            const startPos = sehirKoordinatlari[baslangic] || sehirKoordinatlari["İstanbul"]; // Bulamazsa varsayılan
-            const endPos = sehirKoordinatlari[varis] || sehirKoordinatlari["Ankara"];
-
-            L.marker(startPos).addTo(routeLayer).bindPopup("Çıkış: " + baslangic);
-            L.marker(endPos).addTo(routeLayer).bindPopup("Varış: " + varis);
-
-            var line = L.polyline([startPos, endPos], { color: '#2563eb', weight: 4, opacity: 0.8 }).addTo(routeLayer);
-            map.fitBounds(line.getBounds(), { padding: [50, 50] });
+        function ekraniGoster(ekran) {
+            document.getElementById("login-section").style.display = ekran === "login" ? "flex" : "none";
+            document.getElementById("dashboard-section").style.display = ekran === "dashboard" ? "block" : "none";
         }
 
+        // --- 2. GÜVENLİK MERKEZİ (API İSTEK YÖNETİCİSİ) ---
+        async function guvenliIstekAt(url, options = {}) {
+            const token = localStorage.getItem("jwt_token");
 
-        // --- 2. SIGNALR (CANLI BİLDİRİM TELSİZİ) ---
-        // Backend'deki NotificationHub adresimize bağlanıyoruz
-        const connection = new signalR.HubConnectionBuilder()
-            .withUrl("http://localhost:5199/notificationHub")
-            .withAutomaticReconnect()
-            .build();
+            const headers = { ...options.headers };
+            if (token) {
+                headers["Authorization"] = `Bearer ${token}`;
+            }
 
-        connection.on("ReceiveNotification", function (message) {
-            showToast("🔔 " + message);
-        });
+            if (!(options.body instanceof FormData)) {
+                headers["Content-Type"] = "application/json";
+            }
 
-        connection.start().then(function () {
-            document.getElementById("connectionStatus").innerHTML = "🟢 Telsiz Bağlantısı Aktif";
-            document.getElementById("connectionStatus").style.background = "#dcfce7";
-            document.getElementById("connectionStatus").style.color = "#166534";
+            const response = await fetch(url, { ...options, headers });
 
-            // Simüle edilmiş Kullanıcı 1 (Backend'de test için CustomerId=1 vermiştik)
-            connection.invoke("JoinUserGroup", 1).catch(err => console.error(err));
-        }).catch(function (err) {
-            console.error("SignalR Bağlantı Hatası: ", err);
-        });
+            if (response.status === 401 || response.status === 403) {
+                showToast("Yetkiniz reddedildi veya oturumunuz düştü!");
+                cikisYap();
+                throw new Error("Unauthorized");
+            }
 
-        function showToast(message) {
-            const container = document.getElementById("notification-container");
-            const toast = document.createElement("div");
-            toast.className = "toast";
-            toast.innerHTML = `<strong>Sistem Mesajı:</strong> ${message}`;
-            container.appendChild(toast);
-
-            // 5 saniye sonra bildirimi sil
-            setTimeout(() => { toast.remove(); }, 5000);
+            return response;
         }
 
-
-        // --- 3. API İSTEKLERİ (C# BACKEND'E BAĞLANTI) ---
-        const API_URL = "http://localhost:5199/api";
-
-        // İlanları Getir
-        async function ilanlariGetir() {
-            const listeDiv = document.getElementById("ilanListesi");
-            listeDiv.innerHTML = "<em>Yükleniyor...</em>";
+        // --- 3. AUTH İŞLEMLERİ ---
+        async function girisYap() {
+            const email = document.getElementById("loginEmail").value;
+            const pass = document.getElementById("loginPassword").value;
+            const errBox = document.getElementById("loginError");
 
             try {
-                const response = await fetch(`${API_URL}/Shipments`);
-                if (!response.ok) throw new Error("Veri çekilemedi");
+                const res = await fetch(`${API_URL}/Auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ Username: email, Password: pass })
+                });
 
-                // Backend'den Pagination (sayfalama) modeli dönüyor. Asıl veriler "data" içinde.
+                const data = await res.json();
+
+                if (res.ok) {
+                    localStorage.setItem("jwt_token", data.token);
+                    localStorage.setItem("user_email", data.email);
+
+                    errBox.style.display = "none";
+                    window.location.reload();
+                } else {
+                    errBox.innerText = data.message || "Giriş başarısız.";
+                    errBox.style.display = "block";
+                }
+            } catch (e) {
+                errBox.innerText = "Sunucuya ulaşılamıyor.";
+                errBox.style.display = "block";
+            }
+        }
+
+        function cikisYap() {
+            localStorage.removeItem("jwt_token");
+            localStorage.removeItem("user_email");
+            window.location.reload();
+        }
+
+        // --- 4. SİGNALR (Şifreli Telsiz Bağlantısı) ---
+        function telsiziBaslat(token) {
+            signalRConnection = new signalR.HubConnectionBuilder()
+                .withUrl("/notificationHub", { // BURASI DA GÜNCELLENDİ
+                    accessTokenFactory: () => token
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            signalRConnection.on("ReceiveNotification", function (message) {
+                showToast("🔔 " + message);
+            });
+
+            signalRConnection.start().then(function () {
+                const statusSpan = document.getElementById("connectionStatus");
+                statusSpan.innerHTML = "🟢 Telsiz Aktif";
+                statusSpan.style.background = "rgba(16, 185, 129, 0.1)";
+                statusSpan.style.color = "var(--success)";
+
+                signalRConnection.invoke("JoinUserGroup", 1).catch(err => console.error(err));
+            }).catch(function (err) {
+                console.error("Telsiz Bağlantı Hatası: ", err);
+            });
+        }
+
+        // --- 5. İŞ MANTIKLARI (Güvenli İstekler) ---
+        async function ilanlariGetir() {
+            const listeDiv = document.getElementById("ilanListesi");
+            listeDiv.innerHTML = "<p style='text-align:center;'>Veriler şifreli kanaldan indiriliyor...</p>";
+
+            try {
+                const response = await guvenliIstekAt(`${API_URL}/Shipments`);
                 const jsonResponse = await response.json();
                 const ilanlar = jsonResponse.data;
 
                 listeDiv.innerHTML = "";
+                if (ilanlar.length === 0) listeDiv.innerHTML = "<p>Aktif ilan bulunamadı.</p>";
+
                 ilanlar.forEach(ilan => {
                     listeDiv.innerHTML += `
                             <div class="ilan-item">
                                 <div>
-                                    <div style="font-size: 1.1rem; margin-bottom:5px;">
+                                    <div style="font-size: 1.1rem; margin-bottom:5px; color: var(--text-light);">
                                         <strong>${ilan.originAddress} ➔ ${ilan.destinationAddress}</strong>
                                     </div>
-                                    <span class="ilan-badge">${ilan.status}</span>
-                                    <span style="margin-left:10px; color:#64748b;">${ilan.weight} Ton</span>
+                                    <span class="ilan-badge">ID: ${ilan.id} | ${ilan.status}</span>
+                                    <span style="margin-left:10px; color:var(--text-muted);">${ilan.weight} Ton</span>
                                 </div>
                                 <div style="display:flex; gap:10px;">
-                                    <button style="background-color:#0284c7; padding: 8px;" onclick="rotayiCiz('${ilan.originAddress}', '${ilan.destinationAddress}')">Harita</button>
-                                    <button style="background-color:#16a34a; padding: 8px;" onclick="teklifVer(${ilan.id})">Teklif Ver</button>
+                                    <button onclick="rotayiCiz('${ilan.originAddress}', '${ilan.destinationAddress}')" style="background:var(--navy-light); color:white; border:1px solid rgba(255,255,255,0.2); padding: 8px 12px; border-radius:4px; cursor:pointer;">Rota</button>
+                                    <button onclick="teklifVer(${ilan.id})" style="background:var(--orange-main); color:white; border:none; padding: 8px 12px; border-radius:4px; cursor:pointer;">Teklif At</button>
                                 </div>
                             </div>
                         `;
                 });
             } catch (error) {
-                listeDiv.innerHTML = `<span style="color:red;">Bağlantı hatası: API çalışıyor mu? (${error.message})</span>`;
+                if (error.message !== "Unauthorized") {
+                    listeDiv.innerHTML = `<span style="color:var(--danger);">Bağlantı hatası yaşandı.</span>`;
+                }
             }
         }
 
-        // Akıllı Fiyat Hesapla
-        async function fiyatHesapla() {
-            const origin = document.getElementById("calcOrigin").value;
-            const dest = document.getElementById("calcDest").value;
-            const vehicle = document.getElementById("calcVehicle").value;
-            const extra = parseFloat(document.getElementById("calcExtra").value);
+        async function teklifVer(shipmentId) {
+            const teklifFiyati = prompt(`${shipmentId} ID'li operasyon için fiyat teklifiniz (TL):`);
+            if (!teklifFiyati) return;
 
             try {
-                const response = await fetch(`${API_URL}/Pricing/calculate`, {
+                const response = await guvenliIstekAt(`${API_URL}/Offers`, {
                     method: "POST",
-                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        shipmentId: shipmentId,
+                        price: parseFloat(teklifFiyati),
+                        validUntil: new Date(new Date().getTime() + 86400000).toISOString()
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    showToast(data.message);
+                } else {
+                    showToast("Sistem Reddi: " + (data.message || "Hata oluştu"));
+                }
+            } catch (error) {
+                console.error(error);
+            }
+        }
+
+        async function fiyatHesapla() {
+            const origin = document.getElementById("calcOrigin").value || "İstanbul";
+            const dest = document.getElementById("calcDest").value || "Ankara";
+            const vehicle = document.getElementById("calcVehicle").value;
+            const extra = parseFloat(document.getElementById("calcExtra").value || 0);
+
+            try {
+                const response = await guvenliIstekAt(`${API_URL}/Pricing/calculate`, {
+                    method: "POST",
                     body: JSON.stringify({ originCity: origin, destinationCity: dest, vehicleType: vehicle, additionalCosts: extra })
                 });
 
@@ -391,49 +567,21 @@
                     const sonucDiv = document.getElementById("fiyatSonuc");
                     sonucDiv.style.display = "block";
                     sonucDiv.innerHTML = `
-                            <h4 style="margin:0 0 10px 0; color:#166534;">📊 Fiyat Özeti</h4>
-                            <p style="margin:5px 0;"><strong>Rota:</strong> ${veri.rota} (${veri.mesafe})</p>
-                            <p style="margin:5px 0;"><strong>Güncel Mazot:</strong> ${veri.guncelMazotFiyati}</p>
-                            <p style="margin:5px 0;"><strong>Tahmini Yakıt Maliyeti:</strong> ${veri.hesaplananYakit}</p>
-                            <hr style="border:0; border-top:1px dashed #166534; margin:10px 0;">
-                            <p style="margin:5px 0; font-size:1.2rem; color:#15803d;"><strong>KDV Dahil Toplam: ${veri.kdvDahilToplam}</strong></p>
+                            <h4 style="margin:0 0 10px 0; color:var(--success);">📊 Analiz Raporu</h4>
+                            <p style="margin:5px 0;"><strong>Güzergah:</strong> ${veri.rota} (${veri.mesafe})</p>
+                            <p style="margin:5px 0;"><strong>EPDK Mazot:</strong> ${veri.guncelMazotFiyati}</p>
+                            <p style="margin:5px 0;"><strong>Operasyon Maliyeti:</strong> ${veri.hizmetBedeli}</p>
+                            <hr style="border:0; border-top:1px dashed var(--success); margin:10px 0; opacity:0.3;">
+                            <p style="margin:5px 0; font-size:1.1rem; color:var(--success);"><strong>Sistem Önerisi: ${veri.kdvDahilToplam}</strong></p>
                         `;
                 }
             } catch (error) {
-                alert("Hesaplama başarısız. API ayakta mı kontrol edin.");
+                showToast("Hesaplama motoruna erişilemedi.");
             }
         }
 
-        // Hızlı Teklif Verme Simülasyonu
-        async function teklifVer(shipmentId) {
-            const teklifFiyati = prompt(`${shipmentId} numaralı ilan için teklif edeceğiniz fiyat (TL):`);
-            if (!teklifFiyati) return;
-
-            try {
-                const response = await fetch(`${API_URL}/Offers`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        shipmentId: shipmentId,
-                        price: parseFloat(teklifFiyati),
-                        validUntil: new Date(new Date().getTime() + 86400000).toISOString() // 1 gün geçerli
-                    })
-                });
-
-                if (response.ok) {
-                    showToast("Teklifiniz başarıyla iletildi!");
-                } else {
-                    showToast("Hata: Teklif gönderilemedi.");
-                }
-            } catch (error) {
-                console.error("Teklif Hatası:", error);
-            }
-        }
-
-        // Evrak Yükleme (Form-Data)
         async function evrakYukle(event) {
             event.preventDefault();
-
             const shipmentId = document.getElementById("docShipmentId").value;
             const docType = document.getElementById("docType").value;
             const fileInput = document.getElementById("docFile");
@@ -444,20 +592,61 @@
             formData.append("file", fileInput.files[0]);
 
             try {
-                const response = await fetch(`${API_URL}/Documents/upload`, {
+                const response = await guvenliIstekAt(`${API_URL}/Documents/upload`, {
                     method: "POST",
-                    body: formData // İçinde dosya olan gönderimlerde Content-Type tarayıcı tarafından otomatik ayarlanır.
+                    body: formData
                 });
 
+                const data = await response.json();
                 if (response.ok) {
-                    showToast("📄 Evrak başarıyla sisteme yüklendi ve ilişkilendirildi.");
+                    showToast("Evrak şifrelenerek sisteme yüklendi.");
                     document.getElementById("uploadForm").reset();
                 } else {
-                    showToast("❌ Evrak yükleme başarısız. İlan numarasını kontrol edin.");
+                    showToast("Sistem Reddi: " + (data.message || "Hata"));
                 }
             } catch (error) {
-                alert("Sunucuya bağlanılamadı.");
+                console.error(error);
             }
+        }
+
+        // --- HARİTA & YARDIMCILAR ---
+        function haritayiBaslat() {
+            if (map) return;
+            map = L.map('harita').setView([39.0, 35.0], 6);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap © CartoDB'
+            }).addTo(map);
+            routeLayer = L.layerGroup().addTo(map);
+        }
+
+        const sehirKoordinatlari = {
+            "İstanbul": [41.0082, 28.9784], "Ankara": [39.9208, 32.8541],
+            "İzmir": [38.4192, 27.1287], "Bursa": [40.1885, 29.0610],
+            "Adana": [36.9914, 35.3308], "Van": [38.5012, 43.3730], "Mersin": [36.8121, 34.6415]
+        };
+
+        function rotayiCiz(baslangic, varis) {
+            if (!routeLayer) return;
+            routeLayer.clearLayers();
+            const startPos = sehirKoordinatlari[baslangic] || sehirKoordinatlari["İstanbul"];
+            const endPos = sehirKoordinatlari[varis] || sehirKoordinatlari["Ankara"];
+
+            const icon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:#FF6B00; width:12px; height:12px; border-radius:50%; border:2px solid white;'></div>", iconSize: [16, 16] });
+
+            L.marker(startPos, { icon: icon }).addTo(routeLayer).bindPopup("Çıkış: " + baslangic);
+            L.marker(endPos, { icon: icon }).addTo(routeLayer).bindPopup("Varış: " + varis);
+
+            var line = L.polyline([startPos, endPos], { color: '#FF6B00', weight: 3, opacity: 0.8, dashArray: '5, 10' }).addTo(routeLayer);
+            map.fitBounds(line.getBounds(), { padding: [50, 50] });
+        }
+
+        function showToast(message) {
+            const container = document.getElementById("notification-container");
+            const toast = document.createElement("div");
+            toast.className = "toast";
+            toast.innerHTML = `<strong>Sistem Bildirimi:</strong> ${message}`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.remove(); }, 5000);
         }
     </script>
 </body>
